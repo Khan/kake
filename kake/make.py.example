@@ -1,0 +1,23 @@
+"""The basic infrastructure for creating a generated file.
+
+Creating a generated file requires understanding dependencies and
+scheduling tasks.
+"""
+from __future__ import absolute_import
+
+import kake.build
+
+# Import all the compile modules here.  They register themselves.
+import kake_rules.compile_calculator      # @UnusedImport
+import kake_rules.compile_es6             # @UnusedImport
+import kake_rules.compile_extracted_js    # @UnusedImport
+import kake_rules.translate_css           # @UnusedImport
+# [etc]
+
+
+# The public API
+
+CompileFailure = kake.build.CompileFailure
+BadRequestFailure = kake.build.BadRequestFailure
+build = kake.build.build
+build_many = kake.build.build_many

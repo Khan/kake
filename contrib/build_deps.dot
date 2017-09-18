@@ -1,0 +1,133 @@
+// TO VIEW THIS: install 'dot' and run
+//   dot -Tpdf kake/build_deps.dot > /tmp/build_deps.pdf
+// Then you can use your favorite pdf viewer.  If you prefer postscript
+// or png, you can do 'dot -Tps' or 'dot -Tpng'.
+//
+// This is a manual effort to show how data flows through the KA build
+// process.  Each compile-rule is an arrow in the graph below.  This
+// leaves out "ancillary" compile-rules such as the ones that download
+// npm modules.
+//
+// I leave out the js-bundle rules for now, since those are still
+// experimental.
+
+digraph builddeps {
+        // STATIC CONTENT
+        // -------------------------------
+        { rank=same;
+          "jinja2" [shape=box];
+        }
+        { rank=same;
+          "css" [shape=box];
+          "less" [shape=box];
+        }
+        { rank=same;
+          "javascript" [shape=box];
+          "jsx" [shape=box];
+          "handlebars" [shape=box];
+        }
+        { rank=same;
+          "all.pot" [shape=box];
+          "<source files>" [shape=box];
+        }
+        { rank=same;
+          "ka-exercise" [shape=box];
+        }
+
+        // JINJA2
+        // -------------------------------
+        // compile_jinja2.py
+        "jinja2" -> "jinja2 zipfile" [label="compiled_jinja_templates.zip" fontsize=9];
+        "jinja2 zipfile" [style=filled];
+
+
+        // CSS AND LESS
+        // -------------------------------
+        // compiled_autoprefixed_css.py
+        "css" -> "compiled css" [label="compiled_autoprefixed_css/en/f.css" fontsize=9];
+        "compiled less" -> "compiled css" [label="compiled_autoprefixed_css/en/f.less.css" fontsize=9];
+
+        // translate_css.py
+        "compiled css" -> "translated css" [label="compiled_autoprefixed_css/<lang>/f.*.css" fontsize=9];
+
+        // compile_less.py
+        "less" -> "compiled less" [label="compiled_less/en/" fontsize=9];
+
+        // compress_css.py
+        "compiled css" -> "compressed css" [label="compressed_stylesheets/en/f.min.css" fontsize=9];
+        "translated css" -> "compressed css" [label="compressed_stylesheets/<lang>/f.min.css" fontsize=9];
+
+        // compile_js_css_packages.py
+        "compressed css" -> "css package" [label="genfiles/compressed_css_packages_prod/<lang>/f-package.css" fontsize=9];
+        "css package" -> "css package with hash" [label="genfiles/stylesheets/<lang>/f-package-<hash>.css" fontsize=9];
+        "css package with hash" [style=filled];
+
+
+        // JAVASCRIPT, JSX, and HANDLEBARS
+        // -------------------------------
+        // compile_es6.py and translate_javascript.py
+        "javascript" -> "compiled es6" [label="compiled_es6/en/f.js" fontsize=9];
+        // compiled_jsx.py and translate_javascript.py
+        "jsx" -> "compiled jsx" [label="compiled_jsx/en/f.jsx.js" fontsize=9];
+
+        // compile_handlebars.py and translate_handlebars.py
+        "handlebars" -> "py handlebars" [label="compiled_handlebars_py/en/f.py" fontsize=9];
+        "py handlebars" [style=filled];
+        "handlebars" -> "js handlebars" [label="compiled_handlebars_js/en/f.js" fontsize=9];
+
+        "handlebars" -> "translated handlebars" [label="translations/<lang>/f.handlebars" fontsize=9];
+        "per-file mo" -> "translated handlebars" [weight=0 color="gray"];
+
+        "translated handlebars" -> "translated py handlebars" [label="compiled_handlebars_py/<lang>/f.py" fontsize=9];
+        "translated py handlebars" [style=filled];
+        "translated handlebars" -> "translated js handlebars" [label="compiled_handlebars_js/<lang>/f.js" fontsize=9];
+
+        // compress_js.py
+        "javascript" -> "compressed js" [label="compressed_javascript/en/f.min.js" fontsize=9];
+
+        "compiled es6" -> "compressed js" [label="compressed_javascript/en/genfiles/compiled_es6/en/f.js" fontsize=9];
+
+        "compiled jsx" -> "compressed js" [label="compressed_javascript/en/genfiles/compiled_jsx/en/f.jsx.js" fontsize=9];
+
+        "js handlebars" -> "compressed js" [label="compressed_javascript/en/genfiles/compiled_handlebars_js/en/f.handlebars.js" fontsize=9];
+        "translated js handlebars" -> "translated compressed js" [label="compressed_javascript/<lang>/genfiles/compiled_handlebars_js/<lang>/f.handlebars.js" fontsize=9];
+
+        "compressed js" -> "translated compressed js" [label="compressed_javascript/<lang>/f.js\ncompressed_javascript/<lang>/genfiles/compiled_es6/<lang>/f.js\ncompressed_javascript/<lang>/genfiles/compiled_jsx/<lang>/f.yaml.js" fontsize=9];
+        "per-file mo" -> "translated compressed js" [weight=0 color="gray"];
+
+        // compile_js_css_packages.py
+        "compressed js" -> "js package" [label="genfiles/compressed_js_packages_prod/<lang>/f-package.js" fontsize=9];
+        "translated compressed js" -> "js package" [label="genfiles/compressed_js_packages_prod/<lang>/f-package.js" fontsize=9];
+        "js package" -> "js package with hash" [label="genfiles/js/<lang>/f-package-<hash>.js" fontsize=9];
+        "js package with hash" [style=filled];
+
+
+        // PO FILES
+        // -------------------------------
+        // compile_all_pot.py
+        "<source files>" -> "per-file pot" [label="extracted_strings/en/f.pot.pickle" fontsize=9];
+
+        // fake_translate.py (and crowdin...)
+        "po files" [shape=box];
+        "all.pot" -> "po files"  [label="translations/<fakelang>/l.po\n(and crowdin)" fontsize=9];
+
+        // compile_po_files.py
+        "po files" -> "pickled po files" [label="translations/<lang>/*.pickle" fontsize=9];
+        "pickled po files" [style=filled];
+
+        // compile_small_mo.py (and fake_translate.py, for fakelangs)
+        "per-file pot" -> "per-file mo" [label="extracted_strings/<lang>/f.small_mo.pickle" fontsize=9];
+        "po files" -> "per-file mo";
+
+
+        // LEGEND
+        // -------------------------------
+        { rank=sink;
+          edge [style=invis];
+          "Legend:" [shape=none];
+          "static file" [shape=box];
+          "generated file"
+          "uploaded to prod" [style=filled];
+          "Legend:" -> "static file" -> "generated file" -> "uploaded to prod";
+        }
+}

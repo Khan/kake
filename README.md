@@ -60,10 +60,10 @@ happens without any need for manual intervention.
 There are many many tools out there that wish to manage dependencies.
 There are even many of them written in Python.  But it's rare to find
 a dependency system written to be used as a library.  While it's
-possible SCons could be used as a library, for instance, it's clear
-reading the source that the authors did not anticipate that use-case,
-and the code is not written in a way that would be easy.  (If it's
-even possible.)
+possible `waf` or `SCons` could be used as a library, for instance,
+it's clear reading the source that the authors did not anticipate that
+use-case, and neither project is written in a way that would be easy
+(if it's even possible).
 
 
 ## Usage
@@ -136,7 +136,7 @@ build_many = kake.make_template.build_many
 
 Then your webserver app can have code like this:
 ```python
-@flask.route('/render_calculator'):
+@flask.route('/render_calculator')
 def render_calculator():
     # In production, the calculator is pre-built, but on dev it's
     # built on demand

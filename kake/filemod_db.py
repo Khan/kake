@@ -138,7 +138,14 @@ class InMemoryDB(object):
         self.keys_to_update = set()
 
     def __del__(self):
-        self.sync()
+        # During process tear-down sync() can fail with
+        #    Exception TypeError: "'NoneType' object is not callable" in
+        #    <bound method InMemoryDB.__del__ of ...> ignored
+        # because functions that we want to call have already been destroyed.
+        try:
+            self.sync()
+        except TypeError:
+            pass
 
     def __iter__(self):
         """Yields (key, value) tuples."""
@@ -340,7 +347,14 @@ class FilemodDb(object):
         self._db = InMemoryDB(db_filename)
 
     def __del__(self):
-        self._db.sync()
+        # During process tear-down sync() can fail with
+        #    Exception TypeError: "'NoneType' object is not callable" in
+        #    <bound method FilemodDb.__del__ of ...> ignored
+        # because functions that we want to call have already been destroyed.
+        try:
+            self._db.sync()
+        except TypeError:
+            pass
 
     def can_symlink_to(self, outfile_name, symlink_candidate):
         """Return True if symlink_candidate is 'equivalent' to outfile_name.
